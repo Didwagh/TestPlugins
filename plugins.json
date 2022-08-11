@@ -1,0 +1,22 @@
+[
+    {
+        "iconUrl": "https://raw.githubusercontent.com/Didwagh/TestPlugins/master/icon/icon.png",
+        "fileHash": "sha256-e654f7ced4a82a88f3544046b94a73ea138c767f5e74237e7cbdfceed8e3a05b",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/Didwagh/TestPlugins",
+        "fileSize": 26747,
+        "status": 1,
+        "language": "en",
+        "authors": [
+            "NoName"
+        ],
+        "tvTypes": [
+            "Movie"
+        ],
+        "version": 2,
+        "internalName": "TeleStream",
+        "description": "A Telegram streamer which should be used with telestream app",
+        "url": "https://raw.githubusercontent.com/Didwagh/TestPlugins/builds/TeleStream.cs3",
+        "name": "TeleStream"
+    }
+]
