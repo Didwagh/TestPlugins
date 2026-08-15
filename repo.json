@@ -1,0 +1,8 @@
+{
+  "name": "Didwagh TestPlugins",
+  "description": "My Custom Cloudstream Plugins",
+  "manifestVersion": 1,
+  "pluginLists": [
+    "https://raw.githubusercontent.com/Didwagh/TestPlugins/builds/plugins.json"
+  ]
+}
