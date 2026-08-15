@@ -3,6 +3,7 @@ package com.example
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.utils.SubtitleFile
 import com.fasterxml.jackson.annotation.JsonProperty
 
 class ExampleProvider : MainAPI() {
@@ -57,13 +58,14 @@ class ExampleProvider : MainAPI() {
         }
         return newMovieLoadResponse(item?.title ?: "Telegram Video", url, TvType.Movie, url)
     }
-override suspend fun loadLinks(
+
+    override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val link = newExtractorLink(
+        val link = ExtractorLink(
             source = this.name,
             name = "Telegram Stream",
             url = "$mainUrl/play/$data",
