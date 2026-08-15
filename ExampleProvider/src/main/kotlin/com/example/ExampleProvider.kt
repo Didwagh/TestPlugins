@@ -1,21 +1,12 @@
 package com.example
 
-mport com.lagradost.cloudstream3.MainAPI
-import com.lagradost.cloudstream3.SearchResponse
-import com.lagradost.cloudstream3.TvType
-import com.lagradost.cloudstream3.HomePageList
-import com.lagradost.cloudstream3.HomePageResponse
-import com.lagradost.cloudstream3.LoadResponse
-import com.lagradost.cloudstream3.SubtitleFile
+import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import com.fasterxml.jackson.annotation.JsonProperty
 
-
 class ExampleProvider : MainAPI() {
 
-    // ============ CONFIG ============
-    // Your PC's local IP (Move 1), or later your Render URL
     override var mainUrl = "https://tg-cs3.onrender.com"
     override var name = "Telegram Vault"
 
@@ -23,12 +14,13 @@ class ExampleProvider : MainAPI() {
     override val hasSearch = true
     override val supportedTypes = setOf(TvType.Movie)
 
-    // ---- JSON models (match your Python server) ----
+    // ---- JSON Models ----
     data class CatalogItem(
         @JsonProperty("title") val title: String,
         @JsonProperty("total_size") val totalSize: Long,
         @JsonProperty("parts") val parts: List<PartItem>
     )
+
     data class PartItem(
         @JsonProperty("file_id") val fileId: String,
         @JsonProperty("size") val size: Long,
@@ -73,15 +65,16 @@ class ExampleProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        callback(
-            ExtractorLink(
-                this.name,
-                "Telegram Stream",
-                "$mainUrl/play/$data",
-                "",
-                Qualities.Unknown.value
-            )
+        // We use the constructor directly. Ignore the "deprecated" warning in logs, it still works perfectly.
+        val link = ExtractorLink(
+            source = this.name,
+            name = "Telegram Stream",
+            url = "$mainUrl/play/$data",
+            referer = "",
+            quality = Qualities.Unknown.value,
+            isM3u8 = false
         )
+        callback.invoke(link)
         return true
     }
 }
