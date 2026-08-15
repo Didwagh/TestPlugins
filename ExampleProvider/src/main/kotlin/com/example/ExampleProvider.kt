@@ -11,7 +11,6 @@ class ExampleProvider : MainAPI() {
     override var name = "Telegram Vault"
 
     override val hasMainPage = true
-    override val hasSearch = true
     override val supportedTypes = setOf(TvType.Movie)
 
     // ---- JSON Models ----
@@ -59,13 +58,13 @@ class ExampleProvider : MainAPI() {
         return newMovieLoadResponse(item?.title ?: "Telegram Video", url, TvType.Movie, url)
     }
 
+    @Suppress("DEPRECATION") // Ignore the ExtractorLink warning
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        // We use the constructor directly. Ignore the "deprecated" warning in logs, it still works perfectly.
         val link = ExtractorLink(
             source = this.name,
             name = "Telegram Stream",
