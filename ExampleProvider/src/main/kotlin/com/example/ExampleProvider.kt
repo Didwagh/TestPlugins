@@ -6,6 +6,10 @@ import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.core.type.TypeReference
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 
 class ExampleProvider : MainAPI() {
 
@@ -15,24 +19,30 @@ class ExampleProvider : MainAPI() {
     override val hasMainPage = true
     override val supportedTypes = setOf(TvType.Movie)
 
+    // Jackson mapper that KEEPS generic types (fixes the LinkedHashMap crash)
+    private val mapper = ObjectMapper().registerKotlinModule()
+        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+
     // ---- JSON Models ----
     data class CatalogItem(
-        @JsonProperty("title") val title: String,
-        @JsonProperty("total_size") val totalSize: Long,
-        @JsonProperty("parts") val parts: List<PartItem>
+        @JsonProperty("title") val title: String = "",
+        @JsonProperty("total_size") val totalSize: Long = 0,
+        @JsonProperty("parts") val parts: List<PartItem> = emptyList()
     )
 
     data class PartItem(
-        @JsonProperty("file_id") val fileId: String,
-        @JsonProperty("size") val size: Long,
-        @JsonProperty("original_name") val originalName: String,
-        @JsonProperty("chat_id") val chatId: Long,
-        @JsonProperty("message_id") val messageId: Int
+        @JsonProperty("file_id") val fileId: String = "",
+        @JsonProperty("size") val size: Long = 0,
+        @JsonProperty("original_name") val originalName: String = "",
+        @JsonProperty("chat_id") val chatId: Long = 0,
+        @JsonProperty("message_id") val messageId: Int = 0
     )
 
     private suspend fun getCatalog(): List<CatalogItem> {
         return try {
-            app.get("$mainUrl/catalog").parsedSafe<List<CatalogItem>>() ?: emptyList()
+            val text = app.get("$mainUrl/catalog").text
+            // This preserves the generic type info, unlike parsedSafe
+            mapper.readValue(text, object : TypeReference<List<CatalogItem>>() {})
         } catch (e: Exception) {
             emptyList()
         }
