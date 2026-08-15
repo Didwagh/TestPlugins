@@ -57,15 +57,13 @@ class ExampleProvider : MainAPI() {
         }
         return newMovieLoadResponse(item?.title ?: "Telegram Video", url, TvType.Movie, url)
     }
-
-    @Suppress("DEPRECATION") // Ignore the ExtractorLink warning
-    override suspend fun loadLinks(
+override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val link = ExtractorLink(
+        val link = newExtractorLink(
             source = this.name,
             name = "Telegram Stream",
             url = "$mainUrl/play/$data",
