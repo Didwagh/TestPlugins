@@ -2,8 +2,9 @@ package com.example
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
+import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
-import com.lagradost.cloudstream3.utils.SubtitleFile
+import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.fasterxml.jackson.annotation.JsonProperty
 
 class ExampleProvider : MainAPI() {
@@ -65,14 +66,15 @@ class ExampleProvider : MainAPI() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val link = ExtractorLink(
+        val link = newExtractorLink(
             source = this.name,
             name = "Telegram Stream",
             url = "$mainUrl/play/$data",
-            referer = "",
-            quality = Qualities.Unknown.value,
-            isM3u8 = false
-        )
+            type = ExtractorLinkType.VIDEO
+        ) {
+            this.referer = ""
+            this.quality = Qualities.Unknown.value
+        }
         callback.invoke(link)
         return true
     }
