@@ -6,19 +6,20 @@ import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
 
 @CloudstreamPlugin
-class ExamplePlugin: Plugin() {
+class ExamplePlugin : Plugin() {
     private var activity: AppCompatActivity? = null
 
     override fun load(context: Context) {
         activity = context as? AppCompatActivity
+        AppContextHolder.appContext = context.applicationContext
 
-        // All providers should be added in this manner
         registerMainAPI(ExampleProvider())
 
+        // Tapping this provider's settings (gear icon) in CloudStream now
+        // opens the Telegram login sheet instead of the old blank info panel.
         openSettings = {
-            val frag = BlankFragment(this)
             activity?.let {
-                frag.show(it.supportFragmentManager, "Frag")
+                LoginBottomSheet().show(it.supportFragmentManager, "TelegramLogin")
             }
         }
     }
