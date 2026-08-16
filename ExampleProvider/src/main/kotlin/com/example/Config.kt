@@ -7,6 +7,6 @@ package com.example
  * values here, it's fine for them to be used by two different clients.
  */
 object Config {
-    const val API_ID: Int = 0        // <-- put your real api_id here
-    const val API_HASH: String = ""  // <-- put your real api_hash here
+    const val API_ID: Int = 36838764        // <-- put your real api_id here
+    const val API_HASH: String = "d801aa1002e86c63ef6f0cb9d1211c45"  // <-- put your real api_hash here
 }
