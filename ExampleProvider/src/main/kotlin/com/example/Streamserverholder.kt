@@ -22,9 +22,10 @@ object StreamServerHolder {
         server?.stop()
 
         val file = TelegramFileResolver.resolve(chatId, messageId)
-        val bridge = ChunkBridge(file.id, file.size)
+        val fileSizeLong = file.size.toLong()
+        val bridge = ChunkBridge(file.id, fileSizeLong)
 
-        server = LocalStreamServer(bridge, file.size, PORT).also {
+        server = LocalStreamServer(bridge, fileSizeLong, PORT).also {
             it.start(NanoHTTPDStartTimeoutMillis, false)
         }
         currentKey = key

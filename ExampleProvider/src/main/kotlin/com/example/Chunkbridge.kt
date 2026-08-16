@@ -3,13 +3,20 @@ package com.example
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeout
-import org.drinkless.tdlib.TdApi
+import org.drinkless.td.libcore.telegram.TdApi
 import java.io.RandomAccessFile
 import kotlin.coroutines.resume
 
 /**
  * One ChunkBridge per active file/stream.
  * read(position, length) always returns exactly `length` bytes (or throws).
+ *
+ * NOTE: this TDLib build (tdlibx/td 1.6.0) uses 32-bit Int for
+ * DownloadFile's offset/limit, capping addressable position at ~2.14GB.
+ * Public API here stays Long (for HTTP Range header compatibility); the
+ * Int conversion happens only at the TDLib call boundary in
+ * ensureDownloaded(). Positions beyond Int.MAX_VALUE will silently wrap —
+ * fine for small test files, not fine yet for your full 2-3GB files.
  */
 class ChunkBridge(
     private val fileId: Int,
@@ -56,7 +63,7 @@ class ChunkBridge(
                     lateinit var listener: (TdApi.File) -> Unit
                     listener = { f ->
                         filePath = f.local.path
-                        val downloadedTo = f.local.downloadOffset + f.local.downloadedPrefixSize
+                        val downloadedTo = f.local.downloadOffset.toLong() + f.local.downloadedPrefixSize.toLong()
                         val covered = downloadedTo >= (offset + limit) || f.local.isDownloadingCompleted
                         if (covered && cont.isActive) {
                             synchronized(fetchedLock) { fetchedRanges.add(offset..(offset + limit)) }
@@ -67,8 +74,14 @@ class ChunkBridge(
                     TelegramClient.addFileListener(fileId, listener)
                     cont.invokeOnCancellation { TelegramClient.removeFileListener(fileId, listener) }
 
-                    // priority 32 = normal manual download priority (1-32 range in TDLib)
-                    client.send(TdApi.DownloadFile(fileId, 32, offset, limit, false)) { }
+                    val request = TdApi.DownloadFile().apply {
+                        this.fileId = this@ChunkBridge.fileId
+                        priority = 32
+                        this.offset = offset.toInt()
+                        this.limit = limit.toInt()
+                        synchronous = false
+                    }
+                    client.send(request) { }
                 }
             }
         } catch (e: TimeoutCancellationException) {

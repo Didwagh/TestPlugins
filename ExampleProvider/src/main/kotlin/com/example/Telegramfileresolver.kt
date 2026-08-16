@@ -1,7 +1,7 @@
 package com.example
 
 import kotlinx.coroutines.suspendCancellableCoroutine
-import org.drinkless.tdlib.TdApi
+import org.drinkless.td.libcore.telegram.TdApi
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 

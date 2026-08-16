@@ -1,10 +1,10 @@
 package com.example
 
+import android.os.Build
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
-import org.drinkless.tdlib.Client
-import org.drinkless.tdlib.TdApi
+import org.drinkless.td.libcore.telegram.Client
+import org.drinkless.td.libcore.telegram.TdApi
 import java.io.File
 import kotlin.coroutines.resume
 
@@ -24,10 +24,16 @@ sealed class AuthState {
  * Singleton wrapper around one TDLib Client for the whole plugin.
  * One login, reused for every stream.
  *
- * IMPORTANT: If your confirmed-working test plugin imported TDLib classes
- * from a different package than "org.drinkless.tdlib", change the two
- * import lines above to match it exactly. Everything else in this file
- * is independent of that.
+ * Verified against the actual tdlibx/td 1.6.0 source
+ * (org.drinkless.td.libcore.telegram package) — not guessed.
+ *
+ * KNOWN LIMITATION of this specific TDLib build: DownloadFile's offset/limit
+ * are 32-bit Int (this version predates TDLib's move to 64-bit int53 file
+ * offsets). That caps addressable file position at ~2.14GB. For files
+ * under that size this is fine; for your 2-3GB files, playback/seeking
+ * past ~2.14GB will not work correctly with this artifact. Fine for
+ * proving the MVP pipeline on a small test file — revisit before real use
+ * on your full-size files.
  */
 object TelegramClient {
 
@@ -46,29 +52,28 @@ object TelegramClient {
 
         val dbDir = File(AppContextHolder.appContext.filesDir, "tdlib").absolutePath
 
-        client = Client.create({ update -> handleUpdate(update) }, null, null)
+        client = Client.create(
+            { update -> handleUpdate(update) },
+            null,
+            null
+        )
 
-        client?.send(
-            TdApi.SetTdlibParameters().apply {
-                databaseDirectory = dbDir
-                useMessageDatabase = true
-                useSecretChats = false
-                apiId = Config.API_ID
-                apiHash = Config.API_HASH
-                systemLanguageCode = "en"
-                deviceModel = "Android"
-                applicationVersion = "0.1"
-            }
-        ) { }
-        // NOTE ON TDLIB VERSION DIFFERENCES:
-        // Some TDLib Java binding versions removed the nested
-        // TdApi.SetTdlibParameters object shape above and instead take
-        // these same fields as flat constructor arguments, e.g.:
-        //   TdApi.SetTdlibParameters(dbDir, false, true, false, ..., apiId, apiHash, ...)
-        // If Android Studio shows a constructor mismatch error here,
-        // check your test plugin's working init code and match its exact
-        // SetTdlibParameters call shape — the field names/order are the
-        // only thing that differs between versions.
+        val parameters = TdApi.TdlibParameters().apply {
+            databaseDirectory = dbDir
+            useFileDatabase = true
+            useChatInfoDatabase = true
+            useMessageDatabase = true
+            useSecretChats = false
+            apiId = Config.API_ID
+            apiHash = Config.API_HASH
+            systemLanguageCode = "en"
+            deviceModel = "Android"
+            systemVersion = Build.VERSION.RELEASE ?: "Unknown"
+            applicationVersion = "0.1"
+            enableStorageOptimizer = true
+        }
+
+        client?.send(TdApi.SetTdlibParameters(parameters)) { }
     }
 
     fun submitPhone(phone: String) {
