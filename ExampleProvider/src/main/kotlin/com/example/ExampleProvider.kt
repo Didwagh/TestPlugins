@@ -1,4 +1,15 @@
-﻿package com.example
+﻿// ============ ExampleProvider.kt ============
+// ROOT CAUSE OF "No Links Found":
+// CloudStream runs every SearchResponse.url through fixUrl(), which prepends
+// mainUrl to anything that does NOT start with "http". So your raw token
+// "-1004374443616:15728640" arrives in load()/loadLink() as
+// "http://127.0.0.1:38471/-1004374443616:15728640".
+//   -> load() equality check fails  => fallback title "Telegram Video" (your screenshot)
+//   -> loadLink() split(":") yields 4 chunks, not 2 => returns false => "No Links Found"
+// VLC works because you hand it the real /video?... URL directly.
+// FIX: always recover the "chatId:messageId" pair from the tail of the url,
+// and store the clean pair as dataUrl so loadLink() gets sane input.
+package com.example
 
 
 import com.fasterxml.jackson.annotation.JsonProperty
@@ -34,15 +45,13 @@ class ExampleProvider : MainAPI() {
 
     private val mapper = ObjectMapper()
         .registerKotlinModule()
-        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        .configure(DeserializationFeature.FAILONUNKNOWN_PROPERTIES, false)
 
 
-    // Matches the REAL shape the companion app's /catalog returns:
-    // [{ "title": ..., "total_size": ..., "parts": [{ "original_name":..., "size":..., "chat_id":..., "message_id":... }] }]
     data class CatalogItem(
         @JsonProperty("title") val title: String = "",
         @JsonProperty("total_size") val totalSize: Long = 0,
-        @JsonProperty("parts") val parts: List<PartItem> = emptyList()
+        @JsonProperty("parts") val parts: List = emptyList()
     )
 
 
@@ -57,10 +66,21 @@ class ExampleProvider : MainAPI() {
     private fun PartItem.toData() = "$chatId:$messageId"
 
 
-    private suspend fun getCatalog(): List<CatalogItem> {
+    // Accepts BOTH the raw token "-1004374443616:15728640" AND the
+    // fixUrl()-rewritten "http://127.0.0.1:38471/-1004374443616:15728640".
+    // We look only at the segment after the last '/' so the ":38471" port
+    // in the host part can never be mis-parsed as the chat/message pair.
+    private fun extractData(url: String): String? {
+        val tail = url.substringAfterLast('/', url)
+        val match = Regex("^(-?\\d+):(\\d+)$").find(tail) ?: return null
+        return "${match.groupValues[1]}:${match.groupValues[2]}"
+    }
+
+
+    private suspend fun getCatalog(): List {
         return try {
             val text = app.get("$mainUrl/catalog?channel_id=$channelId").text
-            mapper.readValue(text, object : TypeReference<List<CatalogItem>>() {})
+            mapper.readValue(text, object : TypeReference>() {})
         } catch (e: Exception) {
             emptyList()
         }
@@ -70,42 +90,49 @@ class ExampleProvider : MainAPI() {
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val list = getCatalog().mapNotNull { item ->
             val part = item.parts.firstOrNull() ?: return@mapNotNull null
-            newMovieSearchResponse(item.title, part.toData(), TvType.Movie) { }
+            newMovieSearchResponse(item.title, part.toData(), TvType.Movie)
         }
         return newHomePageResponse(HomePageList("Telegram Videos", list))
     }
 
 
-    override suspend fun search(query: String): List<SearchResponse> {
+    override suspend fun search(query: String): List {
         return getCatalog().filter { it.title.contains(query, true) }.mapNotNull { item ->
             val part = item.parts.firstOrNull() ?: return@mapNotNull null
-            newMovieSearchResponse(item.title, part.toData(), TvType.Movie) { }
+            newMovieSearchResponse(item.title, part.toData(), TvType.Movie)
         }
     }
 
 
     override suspend fun load(url: String): LoadResponse {
-        val item = getCatalog().firstOrNull { it.parts.firstOrNull()?.toData() == url }
-        return newMovieLoadResponse(item?.title ?: "Telegram Video", url, TvType.Movie, url)
+        // Recover the clean "chatId:messageId" pair no matter how CS3 rewrote the url.
+        val data = extractData(url)
+        val item = getCatalog().firstOrNull { entry ->
+            entry.parts.any { it.toData() == data }
+        }
+        // Store the CLEAN pair as dataUrl -> loadLink() receives parseable input,
+        // and the real title now shows instead of the "Telegram Video" fallback.
+        return newMovieLoadResponse(
+            item?.title ?: "Telegram Video",
+            url,
+            TvType.Movie,
+            data ?: url
+        )
     }
 
 
-    override suspend fun loadLinks(
-        data: String, // "chatId:messageId"
+    override suspend fun loadLink(
+        data: String, // now guaranteed to be "chatId:messageId"
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val parts = data.split(":")
-        if (parts.size != 2) return false
-
-
-        val chatId = parts[0]
-        val messageId = parts[1]
+        val pair = extractData(data) ?: return false
+        val (chatId, messageId) = pair.split(":")
 
 
         // Dynamically build the direct stream endpoint for this specific message ID
-        val streamUrl = "$mainUrl/video?chat_id=$chatId&message_id=$messageId"
+        val streamUrl = "$mainUrl/video?chatid=$chatId&messageid=$messageId"
 
 
         callback.invoke(
