@@ -1,22 +1,23 @@
 package com.example
 
 import android.content.Context
-import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.FragmentActivity
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
-import com.lagradost.cloudstream3.CloudStreamApp.Companion.getKey
-import com.lagradost.cloudstream3.CloudStreamApp.Companion.setKey
 
 @CloudstreamPlugin
 class ExamplePlugin : Plugin() {
-
     override fun load(context: Context) {
-        // Register the main API
-        registerMainAPI(ExampleProvider())
-    }
+        // 1. Initialize the config so it can read/write settings
+        PluginConfig.init(context)
 
-    companion object {
-        const val PREF_HOST = "companion_host"
-        const val PREF_CHANNEL_ID = "telegram_channel_id"
+        // 2. Register the provider
+        registerMainAPI(ExampleProvider())
+
+        // 3. Enable the Settings Gear Icon
+        openSettings = { activity: FragmentActivity ->
+            val settings = SettingsBottomSheet()
+            settings.show(activity.supportFragmentManager, "settings")
+        }
     }
 }

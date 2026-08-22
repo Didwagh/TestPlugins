@@ -2,8 +2,6 @@ package com.example
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.CloudStreamApp.Companion.getKey
-import com.lagradost.cloudstream3.CloudStreamApp.Companion.setKey
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
@@ -13,7 +11,6 @@ import com.lagradost.cloudstream3.utils.newExtractorLink
 class ExampleProvider : MainAPI() {
 
     private val defaultPort = 38471
-    private val defaultChannelId = -1004374443616L
 
     override var name = "Telegram Vault"
     override var mainUrl = "http://127.0.0.1:$defaultPort"
@@ -21,12 +18,11 @@ class ExampleProvider : MainAPI() {
     override val hasMainPage = true
     override val supportedTypes = setOf(TvType.Movie)
 
-    // Robust Base URL Builder (handles 192.168.0.194, http://..., with or without port)
+    // Pulls from PluginConfig (Settings UI)
     private fun getBaseUrl(): String {
-        var host = getKey<String>(ExamplePlugin.PREF_HOST)?.trim() ?: "127.0.0.1"
+        var host = PluginConfig.host.trim()
         if (host.isBlank()) host = "127.0.0.1"
 
-        // Strip http:// or https:// if manually typed
         if (host.startsWith("http://", ignoreCase = true)) {
             host = host.substring(7)
         } else if (host.startsWith("https://", ignoreCase = true)) {
@@ -34,7 +30,6 @@ class ExampleProvider : MainAPI() {
         }
         host = host.trimEnd('/')
 
-        // Append port 38471 if user only typed an IP address
         if (!host.contains(":")) {
             host = "$host:$defaultPort"
         }
@@ -43,8 +38,7 @@ class ExampleProvider : MainAPI() {
     }
 
     private fun getChannelId(): String {
-        val saved = getKey<String>(ExamplePlugin.PREF_CHANNEL_ID)?.trim()
-        return if (!saved.isNullOrBlank()) saved else defaultChannelId.toString()
+        return PluginConfig.channelId.toString()
     }
 
     data class CatalogItem(

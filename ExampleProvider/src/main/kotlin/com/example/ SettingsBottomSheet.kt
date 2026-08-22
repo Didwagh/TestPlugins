@@ -4,20 +4,10 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.EditText
-import android.widget.LinearLayout
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 
-/**
- * Opened via the gear icon next to "Telegram Vault" in CloudStream's
- * plugin list. Lets you set the companion app's host/IP and the
- * Telegram channel_id without rebuilding the plugin.
- */
 class SettingsBottomSheet : BottomSheetDialogFragment() {
-
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -40,7 +30,7 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
             textSize = 14f
         }
         val hostInput = EditText(requireContext()).apply {
-            hint = "127.0.0.1 (same device) or e.g. 192.168.1.42 (TV)"
+            hint = "127.0.0.1 or 192.168.1.42"
             setText(PluginConfig.host)
         }
 
@@ -50,8 +40,7 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
         }
         val channelInput = EditText(requireContext()).apply {
             hint = "e.g. -1004374443616"
-            val current = PluginConfig.channelId
-            if (current != 0L) setText(current.toString())
+            setText(PluginConfig.channelId.toString())
         }
 
         val saveButton = Button(requireContext()).apply { text = "Save" }
@@ -64,7 +53,7 @@ class SettingsBottomSheet : BottomSheetDialogFragment() {
                 return@setOnClickListener
             }
             if (channelId == null) {
-                Toast.makeText(requireContext(), "Enter a valid channel_id (a negative number)", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Enter a valid channel_id", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
