@@ -14,10 +14,14 @@ class ExamplePlugin : Plugin() {
         // 2. Register the provider
         registerMainAPI(ExampleProvider())
 
-        // 3. Enable the Settings Gear Icon
-        openSettings = { activity: FragmentActivity ->
-            val settings = SettingsBottomSheet()
-            settings.show(activity.supportFragmentManager, "settings")
+        // 3. FIX: Changed 'activity: FragmentActivity' to 'context' 
+        // then cast it to FragmentActivity to show the dialog.
+        openSettings = { ctx ->
+            val fragmentActivity = ctx as? FragmentActivity
+            if (fragmentActivity != null) {
+                val settings = SettingsBottomSheet()
+                settings.show(fragmentActivity.supportFragmentManager, "settings")
+            }
         }
     }
 }
