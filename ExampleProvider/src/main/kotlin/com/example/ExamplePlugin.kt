@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.appcompat.app.AppCompatActivity
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.Plugin
+import com.lagradost.cloudstream3.CloudStreamApp.Companion.getKey
+import com.lagradost.cloudstream3.CloudStreamApp.Companion.setKey
 
 @CloudstreamPlugin
 class ExamplePlugin : Plugin() {
