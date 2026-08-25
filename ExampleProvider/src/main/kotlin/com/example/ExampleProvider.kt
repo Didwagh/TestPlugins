@@ -1,125 +1,165 @@
 package com.example
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.newExtractorLink
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.core.type.TypeReference
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 class ExampleProvider : MainAPI() {
 
-    // Port is fixed (must match StreamService.PORT in the companion app),
-    // but host and channel_id now come from PluginConfig - editable via
-    // the settings gear next to this provider in CloudStream, no rebuild
-    // needed to point at a different device or channel.
-    private val companionAppPort = 38471
+    private val defaultPort = 38471
 
-    // Fire-and-forget scope for prefetch calls from load() - deliberately
-    // separate from load()'s own suspend context so a slow/failed prefetch
-    // can never delay or break the detail screen from opening.
-    private val prefetchScope = CoroutineScope(Dispatchers.IO)
-
-    // Computed fresh on every use rather than overriding mainUrl's own
-    // getter/setter, to avoid any risk of interfering with how MainAPI's
-    // base class itself might read or write that property internally.
-    private val baseUrl: String
-        get() = "http://${PluginConfig.host}:$companionAppPort"
-
-    override var mainUrl = "http://127.0.0.1:38471" // placeholder; baseUrl is what's actually used
     override var name = "Telegram Vault"
+    override var mainUrl = "http://127.0.0.1:$defaultPort"
 
     override val hasMainPage = true
     override val supportedTypes = setOf(TvType.Movie)
 
-    private val mapper = ObjectMapper().registerKotlinModule()
-        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+    // Pulls from PluginConfig (Settings UI)
+    private fun getBaseUrl(): String {
+        var host = PluginConfig.host.trim()
+        if (host.isBlank()) host = "127.0.0.1"
+
+        if (host.startsWith("http://", ignoreCase = true)) {
+            host = host.substring(7)
+        } else if (host.startsWith("https://", ignoreCase = true)) {
+            host = host.substring(8)
+        }
+        host = host.trimEnd('/')
+
+        if (!host.contains(":")) {
+            host = "$host:$defaultPort"
+        }
+
+        return "http://$host"
+    }
+
+    private fun getChannelId(): String {
+        return PluginConfig.channelId.toString()
+    }
 
     data class CatalogItem(
-        @JsonProperty("title") val title: String = "",
-        @JsonProperty("total_size") val totalSize: Long = 0,
-        @JsonProperty("parts") val parts: List<PartItem> = emptyList()
+        @JsonProperty("title") val title: String? = null,
+        @JsonProperty("total_size") val total_size: Long? = null,
+        @JsonProperty("parts") val parts: List<PartItem>? = null
     )
 
     data class PartItem(
-        @JsonProperty("original_name") val originalName: String = "",
-        @JsonProperty("size") val size: Long = 0,
-        @JsonProperty("chat_id") val chatId: Long = 0,
-        @JsonProperty("message_id") val messageId: Long = 0
+        @JsonProperty("original_name") val original_name: String? = null,
+        @JsonProperty("size") val size: Long? = null,
+        @JsonProperty("chat_id") val chat_id: Long? = null,
+        @JsonProperty("message_id") val message_id: Long? = null
     )
 
-    private fun PartItem.toData() = "$chatId:$messageId"
-
     private suspend fun getCatalog(): List<CatalogItem> {
-        if (!PluginConfig.isConfigured()) return emptyList()
+        val base = getBaseUrl()
+        val channel = getChannelId()
+        val url = "$base/catalog?channel_id=$channel"
+
         return try {
-            val text = app.get("$baseUrl/catalog?channel_id=${PluginConfig.channelId}").text
-            mapper.readValue(text, object : TypeReference<List<CatalogItem>>() {})
-        } catch (e: Exception) {
+            val response = app.get(url, timeout = 15L).text
+            parseJson<List<CatalogItem>>(response)
+        } catch (e: Throwable) {
+            e.printStackTrace()
             emptyList()
         }
     }
 
+    override val mainPage = mainPageOf(
+        "catalog" to "Telegram Videos"
+    )
+
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val list = getCatalog().mapNotNull { item ->
-            val part = item.parts.firstOrNull() ?: return@mapNotNull null
-            newMovieSearchResponse(item.title, part.toData(), TvType.Movie) { }
+        val base = getBaseUrl()
+        val catalog = getCatalog()
+        val list = catalog.mapNotNull { item ->
+            val part = item.parts?.firstOrNull() ?: return@mapNotNull null
+            val chatId = part.chat_id ?: return@mapNotNull null
+            val messageId = part.message_id ?: return@mapNotNull null
+
+            val streamUrl = "$base/video?chat_id=$chatId&message_id=$messageId"
+            val title = item.title?.ifBlank { null }
+                ?: part.original_name?.ifBlank { null }
+                ?: "Video ($messageId)"
+
+            newMovieSearchResponse(
+                name = title,
+                url = streamUrl,
+                type = TvType.Movie
+            )
         }
-        return newHomePageResponse(HomePageList("Telegram Videos", list))
+        return newHomePageResponse(request.name, list, hasNext = false)
     }
 
     override suspend fun search(query: String): List<SearchResponse> {
-        return getCatalog().filter { it.title.contains(query, true) }.mapNotNull { item ->
-            val part = item.parts.firstOrNull() ?: return@mapNotNull null
-            newMovieSearchResponse(item.title, part.toData(), TvType.Movie) { }
-        }
+        val base = getBaseUrl()
+        val catalog = getCatalog()
+        return catalog
+            .filter { it.title?.contains(query, ignoreCase = true) == true }
+            .mapNotNull { item ->
+                val part = item.parts?.firstOrNull() ?: return@mapNotNull null
+                val chatId = part.chat_id ?: return@mapNotNull null
+                val messageId = part.message_id ?: return@mapNotNull null
+
+                val streamUrl = "$base/video?chat_id=$chatId&message_id=$messageId"
+                val title = item.title?.ifBlank { null }
+                    ?: part.original_name?.ifBlank { null }
+                    ?: "Video ($messageId)"
+
+                newMovieSearchResponse(
+                    name = title,
+                    url = streamUrl,
+                    type = TvType.Movie
+                )
+            }
     }
 
     override suspend fun load(url: String): LoadResponse {
-        val item = getCatalog().firstOrNull { it.parts.firstOrNull()?.toData() == url }
+        val base = getBaseUrl()
+        val catalog = getCatalog()
 
-        // Give the companion app a head start on the first/last couple MB
-        // before the user even taps Play. Deliberately not awaited - if
-        // this fails or is slow, load() still returns normally either way.
-        val parts = url.split(":")
-        if (parts.size == 2) {
-            val chatId = parts[0]
-            val messageId = parts[1]
-            prefetchScope.launch {
-                try {
-                    app.get("$baseUrl/prefetch?chat_id=$chatId&message_id=$messageId")
-                } catch (e: Exception) {
-                    // Best-effort only - never let a prefetch failure surface anywhere.
-                }
-            }
+        val matchedItem = catalog.firstOrNull { item ->
+            item.parts?.any { part ->
+                val constructed = "$base/video?chat_id=${part.chat_id}&message_id=${part.message_id}"
+                constructed == url
+            } == true
         }
 
-        return newMovieLoadResponse(item?.title ?: "Telegram Video", url, TvType.Movie, url)
+        val title = matchedItem?.title?.ifBlank { null }
+            ?: matchedItem?.parts?.firstOrNull()?.original_name?.ifBlank { null }
+            ?: "Telegram Video"
+
+        return newMovieLoadResponse(
+            name = title,
+            url = url,
+            type = TvType.Movie,
+            dataUrl = url
+        ) {
+            this.plot = "TeleStream Direct Telegram Stream"
+        }
     }
 
     override suspend fun loadLinks(
-        data: String, // "chatId:messageId"
+        data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
-        val parts = data.split(":")
-        if (parts.size != 2) return false
-        val chatId = parts[0]
-        val messageId = parts[1]
+        val base = getBaseUrl()
+        val streamUrl = if (data.startsWith("http")) {
+            data
+        } else {
+            "$base/video?$data"
+        }
 
         callback.invoke(
             newExtractorLink(
                 source = this.name,
-                name = "Telegram Stream",
-                url = "$baseUrl/video?chat_id=$chatId&message_id=$messageId",
+                name = "Direct Stream",
+                url = streamUrl,
                 type = ExtractorLinkType.VIDEO
             ) {
                 this.referer = ""
