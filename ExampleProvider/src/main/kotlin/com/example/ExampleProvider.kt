@@ -3,7 +3,6 @@ package com.example
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
-import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.app
@@ -61,7 +60,7 @@ class ExampleProvider : MainAPI() {
         val items = parseJson<List<CatalogItemDto>>(response)
 
         val searchList = items.map { item ->
-            val serialized = toJson(item)
+            val serialized = item.toJson()
             if (item.type.equals("series", ignoreCase = true)) {
                 newTvSeriesSearchResponse(
                     name = item.title,
@@ -93,7 +92,7 @@ class ExampleProvider : MainAPI() {
         val items = parseJson<List<CatalogItemDto>>(response)
 
         return items.map { item ->
-            val serialized = toJson(item)
+            val serialized = item.toJson()
             if (item.type.equals("series", ignoreCase = true)) {
                 newTvSeriesSearchResponse(
                     name = item.title,
@@ -121,7 +120,7 @@ class ExampleProvider : MainAPI() {
 
         return if (item.type.equals("series", ignoreCase = true)) {
             val episodesList = item.episodes.map { ep ->
-                val epDataJson = toJson(ep.parts)
+                val epDataJson = ep.parts.toJson()
                 val epSizeMb = ep.totalSize / (1024 * 1024)
                 newEpisode(epDataJson) {
                     this.name = "Season ${ep.season} Episode ${ep.episode} (${epSizeMb} MB)"
@@ -142,7 +141,7 @@ class ExampleProvider : MainAPI() {
                 this.plot = item.imdbId?.let { "IMDb ID: $it" }
             }
         } else {
-            val partsDataJson = toJson(item.parts)
+            val partsDataJson = item.parts.toJson()
             newMovieLoadResponse(
                 name = item.title,
                 url = url,
@@ -168,7 +167,6 @@ class ExampleProvider : MainAPI() {
             val streamUrl = "$mainUrl/video?chat_id=${part.chatId}&message_id=${part.messageId}"
             val sizeMb = part.size / (1024 * 1024)
             
-            // Provides labeled selectable links if the file is in multiple parts
             val linkName = if (part.label.isNotBlank()) {
                 "$name - ${part.label} (${sizeMb} MB)"
             } else if (parts.size > 1) {
@@ -178,15 +176,14 @@ class ExampleProvider : MainAPI() {
             }
 
             callback(
-                newExtractorLink(
+                ExtractorLink(
                     source = name,
                     name = linkName,
                     url = streamUrl,
-                    type = ExtractorLinkType.VIDEO
-                ) {
-                    this.quality = Qualities.P1080.value
-                    this.referer = mainUrl
-                }
+                    referer = mainUrl,
+                    quality = Qualities.P1080.value,
+                    isM3u8 = false
+                )
             )
         }
 
