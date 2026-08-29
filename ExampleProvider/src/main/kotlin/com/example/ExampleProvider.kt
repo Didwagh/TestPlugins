@@ -4,11 +4,11 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
 import com.lagradost.cloudstream3.LoadResponse.Companion.addDuration
-import com.lagradost.cloudstream3.utils.AppUtils.parseJson
-import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
 import com.lagradost.cloudstream3.utils.newExtractorLink
+import com.lagradost.cloudstream3.utils.AppUtils.parseJson
+import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.app
 
 class ExampleProvider : MainAPI() {
@@ -25,10 +25,11 @@ class ExampleProvider : MainAPI() {
 
     override val hasQuickSearch = false
 
-    override val supportedTypes = setOf(
-        TvType.Movie,
-        TvType.TvSeries
-    )
+    override val supportedTypes =
+        setOf(
+            TvType.Movie,
+            TvType.TvSeries
+        )
 
     data class FilePartDto(
         @JsonProperty("original_name")
@@ -54,11 +55,15 @@ class ExampleProvider : MainAPI() {
         @JsonProperty("episode")
         val episode: Int = 1,
 
+        @JsonProperty("episode_end")
+        val episodeEnd: Int? = null,
+
         @JsonProperty("total_size")
         val totalSize: Long = 0L,
 
         @JsonProperty("parts")
-        val parts: List<FilePartDto> = emptyList()
+        val parts: List<FilePartDto> =
+            emptyList()
     )
 
     data class CatalogItemDto(
@@ -81,10 +86,12 @@ class ExampleProvider : MainAPI() {
         val totalSize: Long = 0L,
 
         @JsonProperty("parts")
-        val parts: List<FilePartDto> = emptyList(),
+        val parts: List<FilePartDto> =
+            emptyList(),
 
         @JsonProperty("episodes")
-        val episodes: List<EpisodeDto> = emptyList(),
+        val episodes: List<EpisodeDto> =
+            emptyList(),
 
         @JsonProperty("overview")
         val overview: String? = null,
@@ -96,56 +103,83 @@ class ExampleProvider : MainAPI() {
         val runtimeMinutes: Int? = null,
 
         @JsonProperty("genres")
-        val genres: List<String> = emptyList(),
+        val genres: List<String> =
+            emptyList(),
 
         @JsonProperty("cast")
-        val cast: List<String> = emptyList()
+        val cast: List<String> =
+            emptyList()
     )
 
-    override val mainPage = listOf(
-        MainPageData("Telegram Library", "catalog")
-    )
+    override val mainPage =
+        listOf(
+            MainPageData(
+                "Telegram Library",
+                "catalog"
+            )
+        )
 
     override suspend fun getMainPage(
         page: Int,
         request: MainPageRequest
     ): HomePageResponse? {
 
-        val channelId = PluginConfig.getChannelId()
+        val channelId =
+            PluginConfig.getChannelId()
 
-        val url = "$mainUrl/catalog?channel_id=$channelId"
+        val url =
+            "$mainUrl/catalog?channel_id=$channelId"
 
-        val response = app.get(url).text
+        val response =
+            app.get(url).text
 
-        val items = parseJson<List<CatalogItemDto>>(response)
+        val items =
+            parseJson<List<CatalogItemDto>>(
+                response
+            )
 
-        val searchList = items.map { item ->
+        val searchList =
+            items.map { item ->
 
-            val serialized = item.toJson()
+                val serialized =
+                    item.toJson()
 
-            if (item.type.equals("series", ignoreCase = true)) {
-
-                newTvSeriesSearchResponse(
-                    name = item.title,
-                    url = serialized,
-                    type = TvType.TvSeries
+                if (
+                    item.type.equals(
+                        "series",
+                        ignoreCase = true
+                    )
                 ) {
-                    this.posterUrl = item.poster
-                    this.year = item.year
-                }
 
-            } else {
+                    newTvSeriesSearchResponse(
+                        name = item.title,
+                        url = serialized,
+                        type = TvType.TvSeries
+                    ) {
 
-                newMovieSearchResponse(
-                    name = item.title,
-                    url = serialized,
-                    type = TvType.Movie
-                ) {
-                    this.posterUrl = item.poster
-                    this.year = item.year
+                        this.posterUrl =
+                            item.poster
+
+                        this.year =
+                            item.year
+                    }
+
+                } else {
+
+                    newMovieSearchResponse(
+                        name = item.title,
+                        url = serialized,
+                        type = TvType.Movie
+                    ) {
+
+                        this.posterUrl =
+                            item.poster
+
+                        this.year =
+                            item.year
+                    }
                 }
             }
-        }
 
         return newHomePageResponse(
             request.name,
@@ -154,29 +188,49 @@ class ExampleProvider : MainAPI() {
         )
     }
 
-    override suspend fun search(query: String): List<SearchResponse> {
+    override suspend fun search(
+        query: String
+    ): List<SearchResponse> {
 
-        val channelId = PluginConfig.getChannelId()
+        val channelId =
+            PluginConfig.getChannelId()
 
-        val url = "$mainUrl/search?query=$query&channel_id=$channelId"
+        val url =
+            "$mainUrl/search" +
+                "?query=$query" +
+                "&channel_id=$channelId"
 
-        val response = app.get(url).text
+        val response =
+            app.get(url).text
 
-        val items = parseJson<List<CatalogItemDto>>(response)
+        val items =
+            parseJson<List<CatalogItemDto>>(
+                response
+            )
 
         return items.map { item ->
 
-            val serialized = item.toJson()
+            val serialized =
+                item.toJson()
 
-            if (item.type.equals("series", ignoreCase = true)) {
+            if (
+                item.type.equals(
+                    "series",
+                    ignoreCase = true
+                )
+            ) {
 
                 newTvSeriesSearchResponse(
                     name = item.title,
                     url = serialized,
                     type = TvType.TvSeries
                 ) {
-                    this.posterUrl = item.poster
-                    this.year = item.year
+
+                    this.posterUrl =
+                        item.poster
+
+                    this.year =
+                        item.year
                 }
 
             } else {
@@ -186,63 +240,125 @@ class ExampleProvider : MainAPI() {
                     url = serialized,
                     type = TvType.Movie
                 ) {
-                    this.posterUrl = item.poster
-                    this.year = item.year
+
+                    this.posterUrl =
+                        item.poster
+
+                    this.year =
+                        item.year
                 }
             }
         }
     }
 
-    override suspend fun load(url: String): LoadResponse? {
+    override suspend fun load(
+        url: String
+    ): LoadResponse? {
 
-        val item = parseJson<CatalogItemDto>(url)
+        val item =
+            parseJson<CatalogItemDto>(
+                url
+            )
 
-        // Pre-buffer / warm up the stream as soon as the info page opens.
+        // Pre-buffer / warm up the stream
+        // as soon as the info page opens.
         val warmPart =
             item.parts.firstOrNull()
-                ?: item.episodes.firstOrNull()?.parts?.firstOrNull()
+                ?: item.episodes
+                    .firstOrNull()
+                    ?.parts
+                    ?.firstOrNull()
 
         if (warmPart != null) {
+
             try {
+
                 app.get(
-                    "$mainUrl/warmup?chat_id=${warmPart.chatId}&message_id=${warmPart.messageId}",
+                    "$mainUrl/warmup" +
+                        "?chat_id=${warmPart.chatId}" +
+                        "&message_id=${warmPart.messageId}",
                     timeout = 2L
                 )
+
             } catch (_: Throwable) {
-                // Warmup is optional and must not prevent the item page from loading.
+                // Optional optimization.
             }
         }
 
-        // CloudStream's current API uses Score instead of the deprecated rating Int.
-        // Your backend rating is still a 0-10 value, so Score.from10 is the correct mapping.
-        val score = item.rating?.let { Score.from10(it) }
-
-        val tagsList = item.genres.ifEmpty { null }
-
-        val castList = item.cast.ifEmpty { null }
-
-        val durationText = item.runtimeMinutes?.let { "$it minutes" }
-
-        return if (item.type.equals("series", ignoreCase = true)) {
-
-            val episodesList = item.episodes.map { ep ->
-
-                val epDataJson = ep.parts.toJson()
-
-                val epSizeMb = ep.totalSize / (1024 * 1024)
-
-                newEpisode(epDataJson) {
-
-                    this.name =
-                        "Season ${ep.season} Episode ${ep.episode} (${epSizeMb} MB)"
-
-                    this.season = ep.season
-
-                    this.episode = ep.episode
-
-                    this.posterUrl = item.poster
-                }
+        // Current CloudStream API.
+        val score =
+            item.rating?.let {
+                Score.from10(it)
             }
+
+        val tagsList =
+            item.genres.ifEmpty {
+                null
+            }
+
+        val castList =
+            item.cast.ifEmpty {
+                null
+            }
+
+        val durationText =
+            item.runtimeMinutes?.let {
+                "$it minutes"
+            }
+
+        return if (
+            item.type.equals(
+                "series",
+                ignoreCase = true
+            )
+        ) {
+
+            val episodesList =
+                item.episodes.map { ep ->
+
+                    val epDataJson =
+                        ep.parts.toJson()
+
+                    val epSizeMb =
+                        ep.totalSize /
+                            (1024 * 1024)
+
+                    val episodeLabel =
+                        if (
+                            ep.episodeEnd != null &&
+                            ep.episodeEnd > ep.episode
+                        ) {
+
+                            "Episodes " +
+                                "${ep.episode}" +
+                                "–${ep.episodeEnd}"
+
+                        } else {
+
+                            "Episode " +
+                                ep.episode
+                        }
+
+                    newEpisode(
+                        epDataJson
+                    ) {
+
+                        this.name =
+                            "Season " +
+                                "${ep.season} " +
+                                "$episodeLabel " +
+                                "(${epSizeMb} MB)"
+
+                        this.season =
+                            ep.season
+
+                        this.episode =
+                            ep.episode
+
+                        this.posterUrl =
+                            item.poster
+                    }
+                }
 
             newTvSeriesLoadResponse(
                 name = item.title,
@@ -251,27 +367,37 @@ class ExampleProvider : MainAPI() {
                 episodes = episodesList
             ) {
 
-                this.posterUrl = item.poster
+                this.posterUrl =
+                    item.poster
 
-                this.year = item.year
+                this.year =
+                    item.year
 
                 this.plot =
                     item.overview
-                        ?: item.imdbId?.let { "IMDb ID: $it" }
+                        ?: item.imdbId?.let {
+                            "IMDb ID: $it"
+                        }
 
-                this.tags = tagsList
+                this.tags =
+                    tagsList
 
-                // Current CloudStream API.
-                this.score = score
+                this.score =
+                    score
 
-                addActors(castList)
+                addActors(
+                    castList
+                )
 
-                addDuration(durationText)
+                addDuration(
+                    durationText
+                )
             }
 
         } else {
 
-            val partsDataJson = item.parts.toJson()
+            val partsDataJson =
+                item.parts.toJson()
 
             newMovieLoadResponse(
                 name = item.title,
@@ -280,22 +406,31 @@ class ExampleProvider : MainAPI() {
                 dataUrl = partsDataJson
             ) {
 
-                this.posterUrl = item.poster
+                this.posterUrl =
+                    item.poster
 
-                this.year = item.year
+                this.year =
+                    item.year
 
                 this.plot =
                     item.overview
-                        ?: item.imdbId?.let { "IMDb ID: $it" }
+                        ?: item.imdbId?.let {
+                            "IMDb ID: $it"
+                        }
 
-                this.tags = tagsList
+                this.tags =
+                    tagsList
 
-                // Current CloudStream API.
-                this.score = score
+                this.score =
+                    score
 
-                addActors(castList)
+                addActors(
+                    castList
+                )
 
-                addDuration(durationText)
+                addDuration(
+                    durationText
+                )
             }
         }
     }
@@ -307,28 +442,45 @@ class ExampleProvider : MainAPI() {
         callback: (ExtractorLink) -> Unit
     ): Boolean {
 
-        val parts = parseJson<List<FilePartDto>>(data)
+        val parts =
+            parseJson<List<FilePartDto>>(
+                data
+            )
 
-        parts.forEachIndexed { index, part ->
+        parts.forEachIndexed {
+            index,
+            part ->
 
             val streamUrl =
-                "$mainUrl/video?chat_id=${part.chatId}&message_id=${part.messageId}"
+                "$mainUrl/video" +
+                    "?chat_id=${part.chatId}" +
+                    "&message_id=${part.messageId}"
 
             val sizeMb =
-                part.size / (1024 * 1024)
+                part.size /
+                    (1024 * 1024)
 
             val linkName =
-                if (part.label.isNotBlank()) {
+                if (
+                    part.label.isNotBlank()
+                ) {
 
-                    "$name - ${part.label} (${sizeMb} MB)"
+                    "$name - " +
+                        "${part.label} " +
+                        "(${sizeMb} MB)"
 
-                } else if (parts.size > 1) {
+                } else if (
+                    parts.size > 1
+                ) {
 
-                    "$name - Part ${index + 1} (${sizeMb} MB)"
+                    "$name - Part " +
+                        "${index + 1} " +
+                        "(${sizeMb} MB)"
 
                 } else {
 
-                    "$name (${sizeMb} MB)"
+                    "$name " +
+                        "(${sizeMb} MB)"
                 }
 
             callback(
@@ -337,8 +489,12 @@ class ExampleProvider : MainAPI() {
                     name = linkName,
                     url = streamUrl
                 ) {
-                    this.quality = Qualities.P1080.value
-                    this.referer = mainUrl
+
+                    this.quality =
+                        Qualities.P1080.value
+
+                    this.referer =
+                        mainUrl
                 }
             )
         }
