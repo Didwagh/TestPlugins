@@ -8,12 +8,12 @@ import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.app
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.lagradost.cloudstream3.mvvm.logError
 
 class ExampleProvider : MainAPI() {
 
     override var name = "TeleStream"
     
-    // Dynamically reads the companion app IP/port from your saved plugin settings
     override var mainUrl: String
         get() = PluginConfig.getBaseUrl()
         set(value) {}
@@ -23,7 +23,6 @@ class ExampleProvider : MainAPI() {
     override val hasQuickSearch = false
     override val supportedTypes = setOf(TvType.Movie, TvType.TvSeries)
 
-    // Data structures matching TeleStream companion app JSON
     data class FilePartDto(
         @JsonProperty("original_name") val originalName: String = "",
         @JsonProperty("size") val size: Long = 0L,
@@ -118,6 +117,14 @@ class ExampleProvider : MainAPI() {
 
     override suspend fun load(url: String): LoadResponse? {
         val item = parseJson<CatalogItemDto>(url)
+
+        // Pre-buffer / Warm up the stream as soon as the info page opens
+        val warmPart = item.parts.firstOrNull() ?: item.episodes.firstOrNull()?.parts?.firstOrNull()
+        if (warmPart != null) {
+            try {
+                app.get("$mainUrl/warmup?chat_id=${warmPart.chatId}&message_id=${warmPart.messageId}", timeout = 2L)
+            } catch (ignored: Throwable) {}
+        }
 
         return if (item.type.equals("series", ignoreCase = true)) {
             val episodesList = item.episodes.map { ep ->
