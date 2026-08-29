@@ -46,7 +46,12 @@ class ExampleProvider : MainAPI() {
         @JsonProperty("poster") val poster: String? = null,
         @JsonProperty("total_size") val totalSize: Long = 0L,
         @JsonProperty("parts") val parts: List<FilePartDto> = emptyList(),
-        @JsonProperty("episodes") val episodes: List<EpisodeDto> = emptyList()
+        @JsonProperty("episodes") val episodes: List<EpisodeDto> = emptyList(),
+        @JsonProperty("overview") val overview: String? = null,
+        @JsonProperty("rating") val rating: Double? = null,
+        @JsonProperty("runtime_minutes") val runtimeMinutes: Int? = null,
+        @JsonProperty("genres") val genres: List<String> = emptyList(),
+        @JsonProperty("cast") val cast: List<String> = emptyList()
     )
 
     override val mainPage = listOf(
@@ -126,6 +131,13 @@ class ExampleProvider : MainAPI() {
             } catch (ignored: Throwable) {}
         }
 
+        // TMDB gives a 0-10 score; CloudStream's rating field is 0-10000
+        // internally so it can show one decimal place without floats.
+        val ratingInt = item.rating?.let { (it * 1000).toInt() }
+        val tagsList = item.genres.ifEmpty { null }
+        val castList = item.cast.ifEmpty { null }
+        val durationText = item.runtimeMinutes?.let { "$it minutes" }
+
         return if (item.type.equals("series", ignoreCase = true)) {
             val episodesList = item.episodes.map { ep ->
                 val epDataJson = ep.parts.toJson()
@@ -146,7 +158,11 @@ class ExampleProvider : MainAPI() {
             ) {
                 this.posterUrl = item.poster
                 this.year = item.year
-                this.plot = item.imdbId?.let { "IMDb ID: $it" }
+                this.plot = item.overview ?: item.imdbId?.let { "IMDb ID: $it" }
+                this.tags = tagsList
+                this.rating = ratingInt
+                addActors(castList)
+                addDuration(durationText)
             }
         } else {
             val partsDataJson = item.parts.toJson()
@@ -158,7 +174,11 @@ class ExampleProvider : MainAPI() {
             ) {
                 this.posterUrl = item.poster
                 this.year = item.year
-                this.plot = item.imdbId?.let { "IMDb ID: $it" }
+                this.plot = item.overview ?: item.imdbId?.let { "IMDb ID: $it" }
+                this.tags = tagsList
+                this.rating = ratingInt
+                addActors(castList)
+                addDuration(durationText)
             }
         }
     }
