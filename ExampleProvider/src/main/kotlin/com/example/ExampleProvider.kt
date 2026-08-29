@@ -3,6 +3,7 @@ package com.example
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.Qualities
+import com.lagradost.cloudstream3.utils.newExtractorLink
 import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.app
@@ -166,7 +167,7 @@ class ExampleProvider : MainAPI() {
         parts.forEachIndexed { index, part ->
             val streamUrl = "$mainUrl/video?chat_id=${part.chatId}&message_id=${part.messageId}"
             val sizeMb = part.size / (1024 * 1024)
-            
+
             val linkName = if (part.label.isNotBlank()) {
                 "$name - ${part.label} (${sizeMb} MB)"
             } else if (parts.size > 1) {
@@ -176,14 +177,14 @@ class ExampleProvider : MainAPI() {
             }
 
             callback(
-                ExtractorLink(
+                newExtractorLink(
                     source = name,
                     name = linkName,
-                    url = streamUrl,
-                    referer = mainUrl,
-                    quality = Qualities.P1080.value,
-                    isM3u8 = false
-                )
+                    url = streamUrl
+                ) {
+                    this.quality = Qualities.P1080.value
+                    this.referer = mainUrl
+                }
             )
         }
 
