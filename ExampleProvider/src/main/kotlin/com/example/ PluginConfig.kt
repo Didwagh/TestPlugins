@@ -4,24 +4,45 @@ import android.content.Context
 import android.content.SharedPreferences
 
 object PluginConfig {
-    private const val PREFS_NAME = "telegram_vault_config"
-    private const val KEY_HOST = "host"
+    private const val PREFS_NAME = "TeleStreamPluginPrefs"
+    private const val KEY_IP = "server_ip"
+    private const val KEY_PORT = "server_port"
     private const val KEY_CHANNEL_ID = "channel_id"
 
     private lateinit var prefs: SharedPreferences
 
     fun init(context: Context) {
-        if (::prefs.isInitialized) return
-        prefs = context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
 
-    var host: String
-        get() = prefs.getString(KEY_HOST, "127.0.0.1") ?: "127.0.0.1"
-        set(value) = prefs.edit().putString(KEY_HOST, value).apply()
+    fun getBaseUrl(): String {
+        val ip = prefs.getString(KEY_IP, "127.0.0.1") ?: "127.0.0.1"
+        val port = prefs.getInt(KEY_PORT, 38471)
+        val cleanIp = ip.removePrefix("http://").removePrefix("https://").trimEnd('/')
+        return "http://$cleanIp:$port"
+    }
 
-    var channelId: Long
-        get() = prefs.getLong(KEY_CHANNEL_ID, -1004374443616L) // Using your default ID
-        set(value) = prefs.edit().putLong(KEY_CHANNEL_ID, value).apply()
+    fun getServerIp(): String {
+        return prefs.getString(KEY_IP, "127.0.0.1") ?: "127.0.0.1"
+    }
 
-    fun isConfigured(): Boolean = channelId != 0L
+    fun getServerPort(): Int {
+        return prefs.getInt(KEY_PORT, 38471)
+    }
+
+    fun getChannelId(): String {
+        return prefs.getString(KEY_CHANNEL_ID, "") ?: ""
+    }
+
+    fun setServerIp(ip: String) {
+        prefs.edit().putString(KEY_IP, ip.trim()).apply()
+    }
+
+    fun setServerPort(port: Int) {
+        prefs.edit().putInt(KEY_PORT, port).apply()
+    }
+
+    fun setChannelId(channelId: String) {
+        prefs.edit().putString(KEY_CHANNEL_ID, channelId.trim()).apply()
+    }
 }
