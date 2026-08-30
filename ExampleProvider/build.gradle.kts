@@ -14,8 +14,8 @@ version = 2
 cloudstream {
     // All of these properties are optional, you can safely remove any of them.
 
-    description = "Lorem ipsum"
-    authors = listOf("Cloudburst", "Luna712")
+    description = "A Telegram streamer which should be used with telestream app"
+    authors = listOf("NoName")
 
     /**
     * Status int as one of the following:
@@ -32,7 +32,7 @@ cloudstream {
     language = "en"
 
     // Random CC logo I found
-    iconUrl = "https://upload.wikimedia.org/wikipedia/commons/2/2f/Korduene_Logo.png"
+    iconUrl = "https://github.com/Didwagh/TestPlugins/blob/master/icon/icon.png"
 }
 
 android {
