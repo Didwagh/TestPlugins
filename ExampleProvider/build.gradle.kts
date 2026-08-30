@@ -32,7 +32,7 @@ cloudstream {
     language = "en"
 
     // Random CC logo I found
-    iconUrl = "https://github.com/Didwagh/TestPlugins/blob/master/icon/icon.png"
+    iconUrl = "https://raw.githubusercontent.com/Didwagh/TestPlugins/master/icon/icon.png"
 }
 
 android {
