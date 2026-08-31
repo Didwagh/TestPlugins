@@ -11,6 +11,103 @@ import com.lagradost.cloudstream3.utils.AppUtils.parseJson
 import com.lagradost.cloudstream3.utils.AppUtils.toJson
 import com.lagradost.cloudstream3.app
 
+// --------------------------------------------------------------------
+// These DTOs used to be declared INSIDE ExampleProvider (as nested data
+// classes, e.g. "class ExampleProvider { data class EpisodeDto(...) }").
+// That's what R8/D8 was choking on during the GitHub Actions build:
+//
+//   WARNING: D8: Unexpected error during rewriting of Kotlin metadata
+//   for class 'com.example.ExampleProvider$EpisodeDto': ... Should
+//   never be called
+//
+// This is a known R8/D8 limitation with rewriting the Kotlin @Metadata
+// annotation on NESTED classes - it has nothing to do with file/folder
+// names. Moving these three DTOs to top-level (module-scope, same file,
+// just outside the class body) sidesteps it entirely. Nothing about how
+// they're used changes - Jackson deserializes top-level data classes
+// exactly the same way.
+// --------------------------------------------------------------------
+
+data class FilePartDto(
+    @JsonProperty("original_name")
+    val originalName: String = "",
+
+    @JsonProperty("size")
+    val size: Long = 0L,
+
+    @JsonProperty("chat_id")
+    val chatId: Long = 0L,
+
+    @JsonProperty("message_id")
+    val messageId: Long = 0L,
+
+    @JsonProperty("label")
+    val label: String = ""
+)
+
+data class EpisodeDto(
+    @JsonProperty("season")
+    val season: Int = 1,
+
+    @JsonProperty("episode")
+    val episode: Int = 1,
+
+    @JsonProperty("episode_end")
+    val episodeEnd: Int? = null,
+
+    @JsonProperty("total_size")
+    val totalSize: Long = 0L,
+
+    @JsonProperty("parts")
+    val parts: List<FilePartDto> =
+        emptyList()
+)
+
+data class CatalogItemDto(
+    @JsonProperty("type")
+    val type: String = "movie",
+
+    @JsonProperty("title")
+    val title: String = "",
+
+    @JsonProperty("year")
+    val year: Int? = null,
+
+    @JsonProperty("imdb_id")
+    val imdbId: String? = null,
+
+    @JsonProperty("poster")
+    val poster: String? = null,
+
+    @JsonProperty("total_size")
+    val totalSize: Long = 0L,
+
+    @JsonProperty("parts")
+    val parts: List<FilePartDto> =
+        emptyList(),
+
+    @JsonProperty("episodes")
+    val episodes: List<EpisodeDto> =
+        emptyList(),
+
+    @JsonProperty("overview")
+    val overview: String? = null,
+
+    @JsonProperty("rating")
+    val rating: Double? = null,
+
+    @JsonProperty("runtime_minutes")
+    val runtimeMinutes: Int? = null,
+
+    @JsonProperty("genres")
+    val genres: List<String> =
+        emptyList(),
+
+    @JsonProperty("cast")
+    val cast: List<String> =
+        emptyList()
+)
+
 class ExampleProvider : MainAPI() {
 
     override var name = "TeleStream"
@@ -30,86 +127,6 @@ class ExampleProvider : MainAPI() {
             TvType.Movie,
             TvType.TvSeries
         )
-
-    data class FilePartDto(
-        @JsonProperty("original_name")
-        val originalName: String = "",
-
-        @JsonProperty("size")
-        val size: Long = 0L,
-
-        @JsonProperty("chat_id")
-        val chatId: Long = 0L,
-
-        @JsonProperty("message_id")
-        val messageId: Long = 0L,
-
-        @JsonProperty("label")
-        val label: String = ""
-    )
-
-    data class EpisodeDto(
-        @JsonProperty("season")
-        val season: Int = 1,
-
-        @JsonProperty("episode")
-        val episode: Int = 1,
-
-        @JsonProperty("episode_end")
-        val episodeEnd: Int? = null,
-
-        @JsonProperty("total_size")
-        val totalSize: Long = 0L,
-
-        @JsonProperty("parts")
-        val parts: List<FilePartDto> =
-            emptyList()
-    )
-
-    data class CatalogItemDto(
-        @JsonProperty("type")
-        val type: String = "movie",
-
-        @JsonProperty("title")
-        val title: String = "",
-
-        @JsonProperty("year")
-        val year: Int? = null,
-
-        @JsonProperty("imdb_id")
-        val imdbId: String? = null,
-
-        @JsonProperty("poster")
-        val poster: String? = null,
-
-        @JsonProperty("total_size")
-        val totalSize: Long = 0L,
-
-        @JsonProperty("parts")
-        val parts: List<FilePartDto> =
-            emptyList(),
-
-        @JsonProperty("episodes")
-        val episodes: List<EpisodeDto> =
-            emptyList(),
-
-        @JsonProperty("overview")
-        val overview: String? = null,
-
-        @JsonProperty("rating")
-        val rating: Double? = null,
-
-        @JsonProperty("runtime_minutes")
-        val runtimeMinutes: Int? = null,
-
-        @JsonProperty("genres")
-        val genres: List<String> =
-            emptyList(),
-
-        @JsonProperty("cast")
-        val cast: List<String> =
-            emptyList()
-    )
 
     override val mainPage =
         listOf(
